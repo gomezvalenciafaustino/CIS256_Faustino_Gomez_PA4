@@ -23,15 +23,16 @@ ENGLISH_WORDS = (
 WORDS_LIST_ERROR = "There is an issue with the list; the word is not in the list."
 SHOW_CURRENT_STATUS = "Current word progress: "
 PROMPT_LETTER = "please enter one letter: "
-PROMPT_EXIT = "Do you want to end the game? "
+PROMPT_EXIT = "Do you want to end the game [Yes/No]? "
 
 TRY_AGAIN = "Please, try again."
-WARNING_EMPTY_INPUT = f"You need to enter a letter, {TRY_AGAIN}"
-WARNING_ONE_LETTER = f"More than one letter, {TRY_AGAIN}"
-WARNING_INVALID_LETTER = f"That is not a valid letter, {TRY_AGAIN}"
-WARNING_LETTER_TRIED = f"was already tried, {TRY_AGAIN}"
-WARNING_NOT_IN_WORD = "is not part of the word, you have lost one chance"
-WARNING_INVALID_OPTION = f"You entered an invalid option, {TRY_AGAIN}"
+WARNING_EMPTY_INPUT = f"You need to enter a letter. {TRY_AGAIN}"
+WARNING_ONE_LETTER = f"More than one letter. {TRY_AGAIN}"
+WARNING_INVALID_LETTER = f"That is not a valid letter. {TRY_AGAIN}"
+WARNING_LETTER_TRIED = f"was already tried. {TRY_AGAIN}"
+WARNING_NOT_IN_WORD = "is not part of the word. You have lost one chance"
+WARNING_LAST_ONE = "and it was the last one."
+WARNING_INVALID_OPTION = f"You entered an invalid option. {TRY_AGAIN}"
 
 YES = ('yes', 'y',)
 NO = ('no', 'n',)
@@ -59,25 +60,25 @@ def get_random_word() -> str:
     '''
     return random.choice(ENGLISH_WORDS).lower()
 
-def reveal_letters(word_to_guess: str, remaining_letters_to_guess: list[str]) -> None:
+def reveal_letters(word_to_guess: str, unguessed_letters: set) -> None:
     ''' Shows the guessed letters in the word, if any.
 
         Parameters:
             word_to_guess (str): The word to be guessed.
-            remaining_letters_to_guess (list[str]): List of all letters still pending to be guessed.
+            unguessed_letters (set): Set of all letters still pending to be guessed.
         Returns:
             None:
     '''
-    partial_guess = [letter if letter not in remaining_letters_to_guess else '*' for letter in word_to_guess]
+    partial_guess = [letter if letter not in unguessed_letters else '*' for letter in word_to_guess]
     print(f"{SHOW_CURRENT_STATUS} {' '.join(partial_guess)}")
 
-def get_letter(letter_tried: list[str]) -> str:
+def get_letter(letters_tried: list[str]) -> str:
     ''' Get input letter.
 
         Parameters:
-            letter_tried (list[str]): List of all letters already tried.
+            letters_tried (list[str]): List of all letters already tried.
         Returns:
-            str: Letter entered.
+            str: A valid, non-keyed letter.
     '''
     print()
     while True:
@@ -94,7 +95,7 @@ def get_letter(letter_tried: list[str]) -> str:
             print(WARNING_INVALID_LETTER)
             continue
 
-        if letter in letter_tried:
+        if letter in letters_tried:
             print(f"'{letter}' {WARNING_LETTER_TRIED}")
             continue
         return letter
@@ -135,40 +136,39 @@ if __name__ == '__main__':
             print(WORDS_LIST_ERROR)
             break
 
-        remaining_letters_to_guess = list(word_to_guess)
-        letter_tried = []
-        max_tries = len(word_to_guess)
+        unguessed_letters = set(word_to_guess)  # Remove repeated letters in word to guess.
+        max_tries = len(unguessed_letters)  # More opportunities if the word is longer, but account for duplicates.
         tries = max_tries
+        letters_tried = []
+
         while tries:
-            reveal_letters(word_to_guess, remaining_letters_to_guess)
+            reveal_letters(word_to_guess, unguessed_letters)  # Show progress.
             print(f"You have {tries} opportunities left to guess.")
 
-            letter = get_letter(letter_tried)
-            letter_tried.append(letter)
+            letter = get_letter(letters_tried)
+            letters_tried.append(letter)  # Update queue.
 
             if not is_letter_in_word(letter, word_to_guess):
                 print(f"{letter} {WARNING_NOT_IN_WORD}", end="")
-                tries -= 1
+                tries -= 1  # One opportunity lost.
                 if tries:
-                    print(f", {TRY_AGAIN}")
+                    print(f". {TRY_AGAIN}")
                 else:
-                    print()
+                    print(f", {WARNING_LAST_ONE}")  # Ran out of opportunities.
                 continue
 
-            # Rebuilt letters still pending to guess
-            remaining_letters_to_guess = [_ for _ in remaining_letters_to_guess if _ != letter]
-            if remaining_letters_to_guess:
-                continue
-
-            print(f"\nYou won! You guessed the word {word_to_guess.upper()} " 
-                f"with only {max_tries - tries} unsuccessful attempts.")
-            break
+            # Remove found letter from set
+            unguessed_letters.remove(letter)
+            if not unguessed_letters:
+                print(f"\nYou won! You guessed the word {word_to_guess.upper()} " 
+                    f"with only {max_tries - tries} unsuccessful attempts.")
+                break
         else:
             print(f"\nYou didn't win, the word was: {word_to_guess.upper()} " 
                 f"and you ran out of opportunities.")
         
         if confirm_exit():
             break
-        print()
-    print(GAME_ENDED)
+        print()  # Insert a new line into the console for the new game.
+    print(f"\n{GAME_ENDED}")
 # End of program
